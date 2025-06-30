@@ -9,14 +9,14 @@ import {
   useState,
 } from "react";
 
-import { getCookie, deleteCookie, setCookie } from "cookies-next";
+// <<< FIX: Import the OptionsType for cookies
+import { getCookie, deleteCookie, setCookie, OptionsType } from "cookies-next";
 
 // @ts-ignore
 const AuthContext = createContext<{
   authContext: IAuthContext;
   signInLocal: (ctx: IAuthContext, expiringDateTime: Date) => void;
   signOutLocal: () => void;
-  // <<< FIX: Add a new function to update the user state
   updateUserInContext: (user: IAuthContext["user"]) => void;
 }>();
 
@@ -54,7 +54,8 @@ export const AuthContextProvider = (props: PropsWithChildren) => {
   };
 
   const signInLocal = (ctx: IAuthContext, expiringDateTime: Date) => {
-    const cookieOptions = {
+    // <<< FIX: Define the type for cookieOptions to satisfy TypeScript
+    const cookieOptions: OptionsType = {
       expires: expiringDateTime,
       sameSite: "lax",
       path: "/",
@@ -73,26 +74,23 @@ export const AuthContextProvider = (props: PropsWithChildren) => {
     setAuthContext({ user: null, token: null });
   };
 
-  // <<< FIX: Add the new function to update the user in the context and cookie
   const updateUserInContext = (newUser: IAuthContext["user"]) => {
     if (newUser) {
-      // 1. Update the React state
       setAuthContext((prevContext) => ({
         ...prevContext,
         user: newUser,
       }));
-      // 2. Update the cookie with the fresh data
       const tokenCookie = getCookie("auth_token");
       if (tokenCookie) {
-        // We just update the user cookie, keeping the existing token cookie
-        setCookie("auth_user", JSON.stringify(newUser), {
+        // Here we define the options again with no expiry to update a session cookie
+        const cookieOptions: OptionsType = {
           sameSite: "lax",
           path: "/",
-        });
+        }
+        setCookie("auth_user", JSON.stringify(newUser), cookieOptions);
       }
     }
   };
-
 
   useEffect(() => {
     loadContextFromCookies();
@@ -100,7 +98,6 @@ export const AuthContextProvider = (props: PropsWithChildren) => {
 
   return (
     <AuthContext.Provider
-      // <<< FIX: Provide the new function through the context
       value={{ authContext, signInLocal, signOutLocal, updateUserInContext }}
     >
       {props.children}

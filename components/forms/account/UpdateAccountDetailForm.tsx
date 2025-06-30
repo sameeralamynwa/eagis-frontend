@@ -1,4 +1,4 @@
-// components/forms/account/UpdateAccountDetailForm.tsx
+// updateaccount
 
 "use client";
 
@@ -11,6 +11,7 @@ import { fireToast } from "@/utills/fireToast";
 import Image from "next/image";
 import { useState, type FormEventHandler, useEffect, useRef } from "react";
 import type { inferFormattedError } from "zod";
+import { IAuthContext } from "@/utills/types/IAuthContext";
 
 export default function UpdateAccountDetailForm() {
   const [errors, setErrors] = useState<
@@ -24,7 +25,7 @@ export default function UpdateAccountDetailForm() {
 
   const { form, set } = useStateForm({
     name: "",
-    username: "",
+    username: "", // Keeping this field in the UI as per your code
     about: "",
   });
 
@@ -35,6 +36,7 @@ export default function UpdateAccountDetailForm() {
       set("about", user.profile?.about || "");
     }
   }, [user, set]);
+
 
   const submit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
@@ -56,29 +58,11 @@ export default function UpdateAccountDetailForm() {
       formData.append("about", validationResult.data.about);
     }
 
-    // --- DEBUGGING LOGS START HERE ---
-    console.log("--- [DEBUG] Checking for avatar file ---");
-
     const avatarFile = avatarFileRef.current?.files?.[0];
-    
-    console.log("[DEBUG] File Input Element:", avatarFileRef.current);
-    console.log("[DEBUG] Selected file object:", avatarFile);
-
     if (avatarFile) {
-      console.log(`[DEBUG] File found: '${avatarFile.name}'. Appending to FormData.`);
       formData.append("avatar", avatarFile);
-    } else {
-      console.log("[DEBUG] No file selected.");
     }
     
-    console.log("[DEBUG] Final FormData content before sending:");
-    // FormData is tricky to log directly, so we iterate over it.
-    for (const pair of formData.entries()) {
-      console.log(`  - ${pair[0]}:`, pair[1]);
-    }
-    console.log("--- [DEBUG] End of file check ---");
-    // --- DEBUGGING LOGS END HERE ---
-
     const { data, errorMessage } = await customFetch<IAuthContext['user']>(
       "/account/update", 
       {
@@ -96,9 +80,12 @@ export default function UpdateAccountDetailForm() {
     
     setLoading(false);
   };
+  
+  const avatarUrl = user?.profile?.avatar 
+    ? `${process.env.NEXT_PUBLIC_API_URL}${user.profile.avatar}` 
+    : appConfig.dummyAvatar;
 
   return (
-    // The JSX part of your form is unchanged.
     <form onSubmit={submit}>
       <div>
         <h2 className="text-xl font-medium leading-6">Profile</h2>
@@ -130,7 +117,7 @@ export default function UpdateAccountDetailForm() {
               </label>
             )}
           </div>
-          
+
           <div className="relative">
             <label htmlFor="about" className="label">
               About
@@ -158,8 +145,8 @@ export default function UpdateAccountDetailForm() {
           <div className="avatar">
             <div className="size-20 rounded-full">
               <Image
-                key={user?.avatar}
-                src={user?.avatar || appConfig.dummyAvatar}
+                key={avatarUrl}
+                src={avatarUrl}
                 alt="Avatar"
                 width={200}
                 height={200}

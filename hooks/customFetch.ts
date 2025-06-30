@@ -12,32 +12,35 @@ export default async function customFetch<T>(
   let errorMessage: string | null = null;
   let data: T | null = null;
 
-  // Set default headers, but be careful not to override FormData's content-type
-  const headers: HeadersInit = {
-    Accept: "application/json",
-    ...options.headers,
-  };
+  // Use the standard `Headers` class for robust header management
+  const headers = new Headers(options.headers);
 
-  // <<< FIX: Logic to handle different body types
-  let body = options.body;
-  if (options.body) {
-    if (options.body instanceof FormData) {
-      // If body is FormData, do not set Content-Type header.
-      // The browser will set it automatically with the correct boundary.
-    } else {
-      // For any other body, assume JSON.
-      headers["Content-Type"] = "application/json";
-      body = JSON.stringify(options.body);
-    }
+  // Set default Accept header if not present
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
   }
+  
+  // <<< FIX: Add 'await' to handle the case where getCookie is async
+  const tokenCookie = await getCookie("auth_token");
 
-  const tokenCookie = getCookie("auth_token");
   if (tokenCookie) {
     try {
       const token = JSON.parse(tokenCookie);
-      headers["Authorization"] = `Bearer ${token}`;
+      headers.set("Authorization", `Bearer ${token}`);
     } catch (e) {
       console.error("Could not parse auth token from cookie", e);
+    }
+  }
+
+  let body = options.body;
+  if (body) {
+    if (body instanceof FormData) {
+      headers.delete("Content-Type"); 
+    } else {
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+      body = JSON.stringify(body);
     }
   }
 
@@ -47,7 +50,7 @@ export default async function customFetch<T>(
   try {
     const res = await fetch(fullUrl, {
       ...options,
-      headers,
+      headers, 
       body: body,
     });
 
@@ -63,7 +66,8 @@ export default async function customFetch<T>(
       if (responseData.detail && Array.isArray(responseData.detail)) {
         errorMessage = responseData.detail[0].msg;
       } else {
-        errorMessage = responseData.detail || responseData.message || "An error occurred.";
+        errorMessage =
+          responseData.detail || responseData.message || "An error occurred.";
       }
     }
   } catch (error) {
