@@ -1,0 +1,29 @@
+name: Deploy Frontend to EC2
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Deploy to EC2
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY_FRONTEND }}
+          EC2_HOST: 44.218.200.78
+          EC2_USER: ubuntu
+        run: |
+          echo "$EC2_SSH_KEY" > deploy_key
+          chmod 600 deploy_key
+          ssh -o StrictHostKeyChecking=no -i deploy_key $EC2_USER@$EC2_HOST << 'EOF'
+            cd /home/ubuntu/eagis-frontend
+            git pull origin main
+            pnpm install
+            pnpm build
+            pm2 restart eagis-frontend || pm2 start --name "eagis-frontend" pnpm -- start
+          EOF
+          rm deploy_key
