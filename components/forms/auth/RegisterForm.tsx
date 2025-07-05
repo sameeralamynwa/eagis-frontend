@@ -63,6 +63,7 @@ export default function RegisterForm() {
     );
 
     if (errorMessage || !data) {
+      console.error("API Error:", errorMessage);
       // Use the specific error message from the backend if it exists
       fireToast({ type: "error", desc: errorMessage || "Registration Failed!" });
     } else {
