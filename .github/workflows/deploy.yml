@@ -24,6 +24,7 @@ jobs:
             git pull origin main
             pnpm install
             pnpm build
+            sudo fuser -k 3000/tcp || true
             pm2 restart eagis-frontend || pm2 start --name "eagis-frontend" pnpm -- start
           EOF
           rm deploy_key
